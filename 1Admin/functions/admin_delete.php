@@ -2,11 +2,9 @@
 session_start();
 require_once('../conn/connection.php');
 
-// Check if it's a POST request and user_id is set
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['user_id'])) {
     $userId = mysqli_real_escape_string($conn, $_POST['user_id']);
-    $archivedBy = isset($_SESSION['id']) ? $_SESSION['id'] : 1; // Default to 1 if not set
-    $reason = isset($_POST['reason']) ? mysqli_real_escape_string($conn, $_POST['reason']) : NULL;
+    $archivedBy = isset($_SESSION['id']) ? $_SESSION['id'] : 1;
 
     try {
         // Start transaction
@@ -24,15 +22,15 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['user_id'])) {
             throw new Exception("User not found");
         }
 
-        // Insert into archived_users matching your table structure
+        // Insert into archived_users
         $archiveQuery = "INSERT INTO archived_users (
             user_id, first_name, last_name, email, 
             phone_num, role, address, gender, 
-            archived_at, archived_by, reason
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)";
+            archived_at, archived_by
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)";
 
         $archiveStmt = mysqli_prepare($conn, $archiveQuery);
-        mysqli_stmt_bind_param($archiveStmt, "isssssssss",
+        mysqli_stmt_bind_param($archiveStmt, "isssssssi",
             $user['id'],
             $user['first_name'],
             $user['last_name'],
@@ -41,42 +39,40 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['user_id'])) {
             $user['role'],
             $user['address'],
             $user['gender'],
-            $archivedBy,
-            $reason
+            $archivedBy
         );
         
         if (!mysqli_stmt_execute($archiveStmt)) {
-            throw new Exception("Failed to insert into archived_users: " . mysqli_error($conn));
+            throw new Exception("Failed to archive user");
         }
 
-        // Update user status in original users table
-        $updateQuery = "UPDATE users SET status = 'archived' WHERE id = ?";
-        $updateStmt = mysqli_prepare($conn, $updateQuery);
-        mysqli_stmt_bind_param($updateStmt, "i", $userId);
+        // Delete from users table
+        $deleteQuery = "DELETE FROM users WHERE id = ?";
+        $deleteStmt = mysqli_prepare($conn, $deleteQuery);
+        mysqli_stmt_bind_param($deleteStmt, "i", $userId);
         
-        if (!mysqli_stmt_execute($updateStmt)) {
-            throw new Exception("Failed to update user status: " . mysqli_error($conn));
+        if (!mysqli_stmt_execute($deleteStmt)) {
+            throw new Exception("Failed to delete user");
         }
 
         // Commit transaction
         mysqli_commit($conn);
         
-        $_SESSION['success_msg'] = "User has been successfully archived";
+        $_SESSION['success_msg'] = "User has been successfully deleted and archived";
         header("Location: admin_manageuser.php");
         exit();
 
     } catch (Exception $e) {
         // Rollback transaction on error
         mysqli_rollback($conn);
-        error_log("Archive error: " . $e->getMessage()); // Log the error
-        $_SESSION['error_msg'] = "Error archiving user: " . $e->getMessage();
+        error_log("Delete error: " . $e->getMessage());
+        $_SESSION['error_msg'] = "Error deleting user: " . $e->getMessage();
         header("Location: admin_manageuser.php");
         exit();
     }
+} else {
+    $_SESSION['error_msg'] = "Invalid request";
+    header("Location: admin_manageuser.php");
+    exit();
 }
-
-// If not POST request or no user_id, redirect back
-$_SESSION['error_msg'] = "Invalid request";
-header("Location: admin_manageuser.php");
-exit();
-?>
+?> 

@@ -1,5 +1,13 @@
-<?php include('../inc/admin_sidebar.php')?>
-<?php include('../inc/header.php')?>
+<?php include('../inc/admin_header.php')?>
+
+
+<?php
+session_start();
+if (!isset($_SESSION["username"])) {
+    die("Session not set! Please check session settings.");
+}
+echo "Welcome, " . $_SESSION["username"];
+?>
 
 
 <!DOCTYPE html>

@@ -1,6 +1,4 @@
-<?php include('../inc/admin_sidebar.php')?>
-<?php include('../inc/header.php')?>
-
+<?php include('../inc/admin_header.php')?>
 
     <style>
         

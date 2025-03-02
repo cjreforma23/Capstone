@@ -1,5 +1,5 @@
 <?php
-   /* $servername = "localhost"; //servername
+    $servername = "localhost"; //servername
     $username="root"; //serverusername
     $password="";
     $db_name = "capstone_db"; //name of the used database
